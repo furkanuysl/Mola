@@ -45,10 +45,13 @@ pub struct Engine {
     pub move_snoozes: u32,
     pub active: Option<Active>,
     break_requested: bool,
+    /// Kullanıcı meşgulken açık hatırlatmanın penceresi gizlenir.
+    hidden: bool,
 }
 
 impl Engine {
-    pub fn tick(&mut self, s: &Settings, idle_secs: u64, running: bool) -> Effects {
+    /// `busy`: tam ekran uygulama ya da görüşme var; yeni hatırlatma açılmaz.
+    pub fn tick(&mut self, s: &Settings, idle_secs: u64, running: bool, busy: bool) -> Effects {
         let mut fx = Effects::default();
 
         // Mola geri sayımı duraklatma ve mesai saatinden bağımsız işler.
@@ -82,13 +85,25 @@ impl Engine {
                 kind: Kind::Move,
                 phase: Phase::Break { remaining: break_secs(s) },
             });
+            self.hidden = false;
             fx.show = true;
             fx.changed = true;
             return fx;
         }
 
-        // Klavye/fare uzun süre boşta kaldıysa kullanıcı kalkmış demektir.
-        let away = idle_secs >= mins(s.idle_reset_min);
+        // Meşgulken açık hatırlatma gizlenir (ekran paylaşımında görünmesin), bitince geri gelir.
+        if busy && self.active.is_some() && !self.hidden {
+            self.hidden = true;
+            fx.hide = true;
+        } else if !busy && self.hidden {
+            self.hidden = false;
+            fx.show = true;
+            fx.changed = true;
+        }
+
+        // Klavye/fare uzun süre boşta kaldıysa kullanıcı kalkmış demektir. Toplantıda dinlerken
+        // ya da film izlerken girdi olmaz ama kişi hâlâ oturuyordur; o yüzden meşgulken sayılmaz.
+        let away = !busy && idle_secs >= mins(s.idle_reset_min);
         if away {
             if self.is_active(Kind::Move) {
                 self.close(&mut fx);
@@ -109,7 +124,7 @@ impl Engine {
             self.sitting += 1;
         }
 
-        if self.active.is_none() {
+        if self.active.is_none() && !busy {
             if s.move_enabled && self.sitting >= mins(s.move_interval_min) {
                 self.open(Kind::Move, &mut fx);
             } else if s.water_enabled && self.water_elapsed >= mins(s.water_interval_min) {
@@ -209,12 +224,14 @@ impl Engine {
 
     fn open(&mut self, kind: Kind, fx: &mut Effects) {
         self.active = Some(Active { kind, phase: Phase::Prompt });
+        self.hidden = false;
         fx.show = true;
         fx.changed = true;
     }
 
     fn close(&mut self, fx: &mut Effects) {
         self.active = None;
+        self.hidden = false;
         fx.hide = true;
         fx.changed = true;
     }
@@ -258,7 +275,7 @@ mod tests {
 
     fn run(e: &mut Engine, s: &Settings, secs: u64, idle: u64) {
         for _ in 0..secs {
-            e.tick(s, idle, true);
+            e.tick(s, idle, true, false);
         }
     }
 
@@ -268,7 +285,7 @@ mod tests {
         let mut e = Engine::default();
         run(&mut e, &s, 119, 0);
         assert!(e.active.is_none());
-        assert!(e.tick(&s, 0, true).show);
+        assert!(e.tick(&s, 0, true, false).show);
         assert_eq!(e.active.unwrap().kind, Kind::Water);
     }
 
@@ -305,7 +322,7 @@ mod tests {
         let mut e = Engine::default();
         run(&mut e, &s, 180, 0);
         assert_eq!(e.active.unwrap().kind, Kind::Move);
-        let fx = e.tick(&s, 60, true);
+        let fx = e.tick(&s, 60, true, false);
         assert!(fx.break_done && fx.hide);
         assert_eq!(e.sitting, 0);
     }
@@ -316,7 +333,7 @@ mod tests {
         let mut e = Engine::default();
         run(&mut e, &s, 180, 0);
         e.start_break(&s).unwrap();
-        let done = (0..60).any(|_| e.tick(&s, 0, true).break_done);
+        let done = (0..60).any(|_| e.tick(&s, 0, true, false).break_done);
         assert!(done);
         assert!(matches!(e.active.unwrap().phase, Phase::Done { .. }));
         run(&mut e, &s, DONE_VISIBLE_SECS, 0);
@@ -328,9 +345,43 @@ mod tests {
         let s = settings();
         let mut e = Engine::default();
         for _ in 0..500 {
-            e.tick(&s, 0, false);
+            e.tick(&s, 0, false, false);
         }
         assert!(e.active.is_none());
         assert_eq!(e.water_elapsed, 0);
+    }
+
+    #[test]
+    fn busy_defers_new_reminders_until_free() {
+        let s = Settings { move_enabled: false, ..settings() };
+        let mut e = Engine::default();
+        for _ in 0..300 {
+            e.tick(&s, 0, true, true);
+        }
+        assert!(e.active.is_none());
+        assert!(e.tick(&s, 0, true, false).show);
+        assert_eq!(e.active.unwrap().kind, Kind::Water);
+    }
+
+    #[test]
+    fn open_reminder_hides_while_busy_and_returns_after() {
+        let s = Settings { move_enabled: false, ..settings() };
+        let mut e = Engine::default();
+        run(&mut e, &s, 120, 0);
+        assert!(e.tick(&s, 0, true, true).hide);
+        assert!(e.active.is_some());
+        let fx = e.tick(&s, 0, true, false);
+        assert!(fx.show && !fx.hide);
+    }
+
+    #[test]
+    fn idle_while_busy_does_not_count_as_standing_up() {
+        let s = Settings { water_enabled: false, ..settings() };
+        let mut e = Engine::default();
+        run(&mut e, &s, 100, 0);
+        for _ in 0..100 {
+            e.tick(&s, 600, true, true);
+        }
+        assert_eq!(e.sitting, 200);
     }
 }

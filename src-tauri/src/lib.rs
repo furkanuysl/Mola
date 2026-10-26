@@ -1,3 +1,4 @@
+mod busy;
 mod engine;
 mod i18n;
 mod idle;
@@ -19,6 +20,7 @@ use tauri::{
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 
 use engine::{Effects, Engine, Kind, Phase};
+use busy::Busy;
 use i18n::Lang;
 use store::{day_key, DayStats, History, Settings, Store};
 
@@ -33,6 +35,7 @@ struct Inner {
     engine: Engine,
     paused_until: Option<Instant>,
     lang: Lang,
+    busy: Option<Busy>,
     tray_text: String,
 }
 
@@ -71,6 +74,7 @@ struct Status {
     next_move_min: Option<u64>,
     paused_min: Option<u64>,
     in_work_hours: bool,
+    busy: Option<Busy>,
 }
 
 #[derive(Serialize)]
@@ -148,6 +152,7 @@ impl Inner {
                 .paused_until
                 .map(|t| t.saturating_duration_since(Instant::now()).as_secs().div_ceil(60)),
             in_work_hours: s.in_work_hours(Local::now()),
+            busy: self.busy,
         }
     }
 
@@ -238,7 +243,10 @@ fn start_ticker(app: AppHandle) {
                 inner.paused_until = None;
             }
             let running = inner.running();
-            (inner.engine.tick(&inner.settings, idle, running), ())
+            let s = &inner.settings;
+            inner.busy = busy::detect(s.quiet_in_fullscreen, s.quiet_in_calls);
+            let busy = inner.busy.is_some();
+            (inner.engine.tick(&inner.settings, idle, running, busy), ())
         });
     });
 }
@@ -434,6 +442,7 @@ pub fn run() {
                     engine: Engine::default(),
                     paused_until: None,
                     lang,
+                    busy: None,
                     tray_text: String::new(),
                 }),
                 store,

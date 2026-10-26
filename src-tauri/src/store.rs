@@ -28,6 +28,10 @@ pub struct Settings {
     pub work_end: String,
     pub weekdays_only: bool,
     pub autostart: bool,
+    /// Tam ekran uygulama (oyun, sunum, video) varken hatırlatmaları beklet.
+    pub quiet_in_fullscreen: bool,
+    /// Mikrofon kullanımdayken (görüntülü/sesli görüşme) hatırlatmaları beklet.
+    pub quiet_in_calls: bool,
     /// "auto", "tr" veya "en".
     pub language: String,
 }
@@ -50,6 +54,8 @@ impl Default for Settings {
             work_end: "18:00".into(),
             weekdays_only: true,
             autostart: false,
+            quiet_in_fullscreen: true,
+            quiet_in_calls: true,
             language: "auto".into(),
         }
     }

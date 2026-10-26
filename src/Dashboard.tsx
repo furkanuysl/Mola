@@ -45,6 +45,9 @@ export function Dashboard() {
       </header>
 
       {!status.inWorkHours && <div className="notice">{t.outsideHours}</div>}
+      {status.busy && (
+        <div className="notice">{status.busy === "call" ? `🎧 ${t.busyCall}` : `🖥️ ${t.busyFullscreen}`}</div>
+      )}
 
       <section className="cards">
         <article className="card water">
@@ -184,6 +187,12 @@ function SettingsForm() {
             {toggle("weekdaysOnly", t.weekdaysOnly)}
           </>
         )}
+      </fieldset>
+
+      <fieldset>
+        <legend>{t.doNotDisturb}</legend>
+        {toggle("quietInFullscreen", t.quietInFullscreen)}
+        {toggle("quietInCalls", t.quietInCalls)}
       </fieldset>
 
       <fieldset>

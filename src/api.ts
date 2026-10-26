@@ -27,6 +27,7 @@ export interface Status {
   nextMoveMin: number | null;
   pausedMin: number | null;
   inWorkHours: boolean;
+  busy: "fullscreen" | "call" | null;
 }
 
 export interface Settings {
@@ -45,6 +46,8 @@ export interface Settings {
   workEnd: string;
   weekdaysOnly: boolean;
   autostart: boolean;
+  quietInFullscreen: boolean;
+  quietInCalls: boolean;
   language: "auto" | Lang;
 }
 
