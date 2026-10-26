@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="420" viewBox="0 0 1280 420">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1424"/>
+      <stop offset="1" stop-color="#0d2f4d"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.22" cy="0.5" r="0.45">
+      <stop offset="0" stop-color="#38bdf8" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#38bdf8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#0369a1"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="420" rx="28" fill="url(#bg)"/>
+  <rect width="1280" height="420" rx="28" fill="url(#glow)"/>
+
+  <!-- dekoratif damlalar -->
+  <g fill="#38bdf8">
+    <path d="M1130 70 C1130 70 1112 92 1112 104 A18 18 0 0 0 1148 104 C1148 92 1130 70 1130 70 Z" opacity="0.18"/>
+    <path d="M1196 250 C1196 250 1170 282 1170 300 A26 26 0 0 0 1222 300 C1222 282 1196 250 1196 250 Z" opacity="0.12"/>
+    <path d="M1060 320 C1060 320 1048 335 1048 343 A12 12 0 0 0 1072 343 C1072 335 1060 320 1060 320 Z" opacity="0.22"/>
+  </g>
+
+  <!-- ikon -->
+  <g transform="translate(110 90) scale(0.234)">
+    <rect width="1024" height="1024" rx="228" fill="url(#tile)"/>
+    <path d="M512 170 C512 170 262 450 262 620 A250 250 0 0 0 762 620 C762 450 512 170 512 170 Z" fill="#ffffff"/>
+    <rect x="424" y="520" width="64" height="200" rx="22" fill="#0b78c2"/>
+    <rect x="536" y="520" width="64" height="200" rx="22" fill="#0b78c2"/>
+  </g>
+
+  <g font-family="Segoe UI, Inter, Helvetica, Arial, sans-serif">
+    <text x="410" y="200" font-size="112" font-weight="700" fill="#ffffff">Mola</text>
+    <text x="414" y="262" font-size="36" font-weight="600" fill="#9fd8ff">Drink water. Stand up. Take a break.</text>
+    <text x="414" y="312" font-size="24" fill="#8aa3bd">A smart water &amp; stand-up reminder for Windows</text>
+  </g>
+</svg>
