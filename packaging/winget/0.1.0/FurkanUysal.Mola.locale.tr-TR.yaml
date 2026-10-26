@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://aka.ms/winget-manifest.locale.1.10.0.schema.json
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.locale.1.12.0.schema.json
 
 PackageIdentifier: FurkanUysal.Mola
 PackageVersion: 0.1.0
@@ -18,4 +18,4 @@ Tags:
 - su
 - verimlilik
 ManifestType: locale
-ManifestVersion: 1.10.0
+ManifestVersion: 1.12.0
