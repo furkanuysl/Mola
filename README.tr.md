@@ -47,6 +47,7 @@
 | ⏱️ **Rehberli mola** | Değişen esneme ve göz dinlendirme önerileriyle geri sayım |
 | 📊 **Panel** | Bugünkü su ve molalar, son 7 günün özeti |
 | 🕘 **Mesai saatleri** | Sadece belirli saatlerde, istersen sadece hafta içi hatırlatır |
+| 🎧 **Rahatsız etme** | Görüşmedeyken ya da tam ekran uygulamadayken (oyun, sunum, video) bekler, bitince hemen hatırlatır |
 | ⏸️ **Duraklatma** | Toplantılar için tepsiden "1 saat duraklat" |
 | 🚀 **Windows ile başlama** | Sessizce tepside başlar |
 | 🌍 **Türkçe ve İngilizce** | Sistem dilini izler, istediğin an değiştirebilirsin |
@@ -70,7 +71,7 @@ Bütün süreler (50 dk, 5 dk, erteleme sayısı…) ayarlardan değiştirilebil
 
 ## 🔐 Gizlilik
 
-Mola **tuş vuruşlarını veya fare hareketlerini asla kaydetmez**. Windows'a tek bir soru sorar: *"son girdiden bu yana kaç saniye geçti?"* ([`GetLastInputInfo`](src-tauri/src/idle.rs)). Ayarlar ve günlük istatistikler `%APPDATA%\app.mola.desktop\` altında düz JSON olarak saklanır. Uygulama **hiçbir ağ isteği yapmaz**. Kod açık, kendin de kontrol edebilirsin.
+Mola **tuş vuruşlarını veya fare hareketlerini asla kaydetmez**. Windows'a tek bir soru sorar: *"son girdiden bu yana kaç saniye geçti?"* ([`GetLastInputInfo`](src-tauri/src/idle.rs)). Görüşmeleri algılamak için yalnızca mikrofonun bir uygulama tarafından *kullanılıp kullanılmadığına* bakar. Bu bilgi, Windows'taki "mikrofon kullanılıyor" simgesinin kaynağı olan kayıttan okunur. Sese asla erişmez ([`busy.rs`](src-tauri/src/busy.rs)). Ayarlar ve günlük istatistikler `%APPDATA%\app.mola.desktop\` altında düz JSON olarak saklanır. Uygulama **hiçbir ağ isteği yapmaz**. Kod açık, kendin de kontrol edebilirsin.
 
 ## 📦 Kurulum
 
@@ -99,6 +100,7 @@ src-tauri/src/
 ├─ engine.rs     # zamanlayıcı mantığı: saf, birim testli
 ├─ store.rs      # ayarlar, geçmiş, JSON kalıcılığı
 ├─ idle.rs       # Windows boşta kalma süresi (GetLastInputInfo)
+├─ busy.rs       # tam ekran ve görüşme algılama
 ├─ i18n.rs       # tepsi menüsü metinleri (tr/en)
 └─ lib.rs        # tepsi, pencereler, komutlar, saniyelik döngü
 src/
@@ -115,7 +117,7 @@ design/          # ikon ve banner kaynakları (SVG)
 - [x] Akıllı sıfırlamalı su ve hareket hatırlatmaları
 - [x] Sınırlı erteleme, rehberli mola, 7 günlük geçmiş
 - [x] Türkçe ve İngilizce
-- [ ] Tam ekran uygulama, sunum ve görüntülü görüşme sırasında rahatsız etmeme
+- [x] Tam ekran uygulama, sunum ve görüntülü görüşme sırasında rahatsız etmeme
 - [ ] Göz molası hatırlatıcısı (20-20-20 kuralı)
 - [ ] Seri sayacı ve haftalık özet
 - [ ] GitHub Releases, winget ve Microsoft Store'da yayın

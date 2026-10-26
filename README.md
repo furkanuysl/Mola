@@ -47,6 +47,7 @@
 | ⏱️ **Guided breaks** | Countdown with rotating stretch and eye-rest tips |
 | 📊 **Dashboard** | Today's water and breaks, plus the last 7 days at a glance |
 | 🕘 **Working hours** | Remind only between set hours, optionally weekdays only |
+| 🎧 **Do not disturb** | Waits while you're in a call or a fullscreen app (game, presentation, video), then reminds you right after |
 | ⏸️ **Pause** | "Pause for 1 hour" from the tray, for meetings |
 | 🚀 **Start with Windows** | Starts quietly in the tray |
 | 🌍 **Turkish & English** | Follows your system language, switchable at any time |
@@ -70,7 +71,7 @@ All the numbers (50 min, 5 min, snooze count…) can be changed in the settings.
 
 ## 🔐 Privacy
 
-Mola **never records keystrokes or mouse movement**. It asks Windows a single question, *"how many seconds since the last input?"* ([`GetLastInputInfo`](src-tauri/src/idle.rs)). Settings and daily stats are stored as plain JSON in `%APPDATA%\app.mola.desktop\`. The app makes **no network requests**. The code is open, so you can check this yourself.
+Mola **never records keystrokes or mouse movement**. It asks Windows a single question, *"how many seconds since the last input?"* ([`GetLastInputInfo`](src-tauri/src/idle.rs)). To detect calls, it only checks *whether* an app is using the microphone, using the same record behind the Windows "microphone in use" icon. It never accesses audio ([`busy.rs`](src-tauri/src/busy.rs)). Settings and daily stats are stored as plain JSON in `%APPDATA%\app.mola.desktop\`. The app makes **no network requests**. The code is open, so you can check this yourself.
 
 ## 📦 Install
 
@@ -99,6 +100,7 @@ src-tauri/src/
 ├─ engine.rs     # timer logic: pure and unit-tested
 ├─ store.rs      # settings, history, JSON persistence
 ├─ idle.rs       # Windows idle time (GetLastInputInfo)
+├─ busy.rs       # fullscreen & call detection
 ├─ i18n.rs       # tray menu texts (tr/en)
 └─ lib.rs        # tray, windows, commands, 1-second tick loop
 src/
@@ -115,7 +117,7 @@ design/          # icon and banner sources (SVG)
 - [x] Water & movement reminders with smart idle reset
 - [x] Limited snoozes, guided breaks, 7-day history
 - [x] Turkish & English
-- [ ] Don't interrupt during fullscreen apps, presentations and video calls
+- [x] Don't interrupt during fullscreen apps, presentations and video calls
 - [ ] Eye-rest reminders (20-20-20 rule)
 - [ ] Streaks and weekly summary
 - [ ] Releases on GitHub, winget and the Microsoft Store
