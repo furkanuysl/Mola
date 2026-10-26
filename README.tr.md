@@ -3,6 +3,8 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/furkanuysl/Mola/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/furkanuysl/Mola/ci.yml?branch=main&style=flat-square&label=CI"></a>
+  <a href="https://github.com/furkanuysl/Mola/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/furkanuysl/Mola?style=flat-square&color=0369a1"></a>
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0369a1?style=flat-square&logo=windows">
   <img alt="Tauri" src="https://img.shields.io/badge/Tauri-2-24c8db?style=flat-square&logo=tauri&logoColor=white">
   <img alt="Rust" src="https://img.shields.io/badge/Rust-backend-b7410e?style=flat-square&logo=rust&logoColor=white">
@@ -75,8 +77,11 @@ Mola **tuş vuruşlarını veya fare hareketlerini asla kaydetmez**. Windows'a t
 
 ## 📦 Kurulum
 
-> Hazır kurulum dosyaları yakında GitHub Releases, winget ve Microsoft Store üzerinden gelecek.
-> O zamana kadar kaynak koddan derleyebilirsin.
+1. [Son sürümden](https://github.com/furkanuysl/Mola/releases/latest) **`Mola_x.y.z_x64-setup.exe`** dosyasını indir.
+2. Çalıştır. Yönetici izni gerekmez, Mola sistem tepsisinde başlar.
+
+> Kurulum dosyası henüz kod imzalı değil, bu yüzden Windows SmartScreen uyarı gösterebilir. **Ek bilgi → Yine de çalıştır**'a tıkla.
+> winget ve Microsoft Store paketleri yolda.
 
 ## 🛠️ Kaynaktan derleme
 

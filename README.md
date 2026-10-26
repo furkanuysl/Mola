@@ -3,6 +3,8 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/furkanuysl/Mola/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/furkanuysl/Mola/ci.yml?branch=main&style=flat-square&label=CI"></a>
+  <a href="https://github.com/furkanuysl/Mola/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/furkanuysl/Mola?style=flat-square&color=0369a1"></a>
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0369a1?style=flat-square&logo=windows">
   <img alt="Tauri" src="https://img.shields.io/badge/Tauri-2-24c8db?style=flat-square&logo=tauri&logoColor=white">
   <img alt="Rust" src="https://img.shields.io/badge/Rust-backend-b7410e?style=flat-square&logo=rust&logoColor=white">
@@ -75,8 +77,11 @@ Mola **never records keystrokes or mouse movement**. It asks Windows a single qu
 
 ## 📦 Install
 
-> Prebuilt installers are coming soon through GitHub Releases, winget and the Microsoft Store.
-> Until then, you can build Mola from source.
+1. Download **`Mola_x.y.z_x64-setup.exe`** from the [latest release](https://github.com/furkanuysl/Mola/releases/latest).
+2. Run it. No admin rights are needed, and Mola starts in your system tray.
+
+> The installer is not code-signed yet, so Windows SmartScreen may show a warning. Click **More info → Run anyway**.
+> winget and Microsoft Store packages are on the way.
 
 ## 🛠️ Build from source
 

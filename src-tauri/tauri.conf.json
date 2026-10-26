@@ -42,13 +42,31 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": [
+      "nsis"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "publisher": "furkan-uysal",
+    "copyright": "© 2026 furkan-uysal. MIT License.",
+    "category": "Productivity",
+    "shortDescription": "Water and stand-up reminder for Windows",
+    "longDescription": "Mola reminds you to drink water and to get up from your desk. It resets the sitting timer when you step away, limits snoozes, and stays quiet during calls and fullscreen apps.",
+    "homepage": "https://github.com/furkanuysl/Mola",
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": [
+          "English",
+          "Turkish"
+        ],
+        "displayLanguageSelector": false
+      }
+    }
   }
 }
