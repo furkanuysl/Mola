@@ -31,6 +31,7 @@ impl Lang {
 pub struct Texts {
     pub water_done: &'static str,
     pub take_break: &'static str,
+    pub focus_toggle: &'static str,
     pub pause_hour: &'static str,
     pub resume: &'static str,
     pub open: &'static str,
@@ -43,6 +44,7 @@ pub struct Texts {
 static TR: Texts = Texts {
     water_done: "Su içtim",
     take_break: "Şimdi mola ver",
+    focus_toggle: "Odak başlat / durdur",
     pause_hour: "1 saat duraklat",
     resume: "Devam et",
     open: "Paneli aç",
@@ -55,6 +57,7 @@ static TR: Texts = Texts {
 static EN: Texts = Texts {
     water_done: "I drank water",
     take_break: "Take a break now",
+    focus_toggle: "Start / stop focus",
     pause_hour: "Pause for 1 hour",
     resume: "Resume",
     open: "Open dashboard",

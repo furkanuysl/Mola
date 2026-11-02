@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { api, ReminderAction, ReminderView } from "./api";
-import { useT } from "./i18n";
+import { exerciseAt, routine, text } from "./exerciseData";
+import { useLang, useT } from "./i18n";
 
 function formatClock(secs: number) {
   const m = Math.floor(secs / 60);
@@ -11,6 +12,7 @@ function formatClock(secs: number) {
 
 export function Reminder() {
   const t = useT();
+  const lang = useLang();
   const [view, setView] = useState<ReminderView | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,6 +60,23 @@ export function Reminder() {
         {snoozeNote}
       </>
     );
+  } else if (view.kind === "eyes") {
+    const elapsed = view.breakTotal - view.breakRemaining;
+    body = (
+      <>
+        <Head icon="👀" title={t.eyesTitle} />
+        <div className="clock">{formatClock(view.breakRemaining)}</div>
+        <div className="bar">
+          <span style={{ width: `${(elapsed / view.breakTotal) * 100}%` }} />
+        </div>
+        <p className="tip">{t.eyesBody}</p>
+        <div className="actions">
+          <button className="ghost" onClick={() => act("skip")}>
+            {t.skip}
+          </button>
+        </div>
+      </>
+    );
   } else if (view.phase === "prompt") {
     body = (
       <>
@@ -74,22 +93,36 @@ export function Reminder() {
     );
   } else if (view.phase === "break") {
     const elapsed = view.breakTotal - view.breakRemaining;
-    const tip = t.tips[Math.floor(elapsed / 30) % t.tips.length];
+    const { exercise, left } = exerciseAt(routine(view.breakRoutine), elapsed);
+    const ex = text(exercise, lang);
     body = (
       <>
-        <Head icon="⏱️" title={t.breakTitle} />
+        <Head icon="⏱️" title={view.focusBreak ? t.focusBreakTitle : t.breakTitle} />
         <div className="clock">{formatClock(view.breakRemaining)}</div>
         <div className="bar">
           <span style={{ width: `${(elapsed / view.breakTotal) * 100}%` }} />
         </div>
-        <p className="tip">{tip}</p>
+        <p className="tip">
+          <strong>
+            {exercise.icon} {ex.name}
+          </strong>{" "}
+          <small>({t.secsLeft(left)})</small>
+          <br />
+          {ex.short}
+        </p>
       </>
     );
   } else {
     body = (
       <>
         <Head icon="✅" title={t.doneTitle} />
-        <p>{t.doneBody}</p>
+        <p>
+          {view.focusNext === "ready"
+            ? t.doneFocusReady
+            : view.focusNext === "started"
+              ? t.doneFocusStarted
+              : t.doneBody}
+        </p>
         <div className="actions">
           <button className="primary" onClick={() => act("dismiss")}>
             {t.close}

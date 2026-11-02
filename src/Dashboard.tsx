@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { api, HistoryDay, Settings, Status } from "./api";
+import { Exercises } from "./Exercises";
+import { ROUTINES, text } from "./exerciseData";
+import { FocusCard } from "./Focus";
+import { ScoreRow, WeekSummary } from "./Summary";
 import { useLang, useT } from "./i18n";
 
 export function Dashboard() {
   const t = useT();
   const [status, setStatus] = useState<Status | null>(null);
   const [history, setHistory] = useState<HistoryDay[]>([]);
+  const [view, setView] = useState<"home" | "settings" | "exercises">("home");
 
   useEffect(() => {
     api.getStatus().then(setStatus);
@@ -18,11 +23,28 @@ export function Dashboard() {
 
   const glasses = status?.glasses;
   const breaks = status?.breaks;
+  const focusMin = status?.focusMin;
   useEffect(() => {
     api.getHistory(7).then(setHistory);
-  }, [glasses, breaks]);
+  }, [glasses, breaks, focusMin, view]);
 
   if (!status) return null;
+
+  if (view === "exercises") return <Exercises onBack={() => setView("home")} />;
+
+  if (view === "settings") {
+    return (
+      <main className="dashboard">
+        <header className="top sub">
+          <button className="ghost back" onClick={() => setView("home")}>
+            ← {t.back}
+          </button>
+          <h1>{t.settings}</h1>
+        </header>
+        <SettingsForm />
+      </main>
+    );
+  }
 
   const waterPct = Math.min(100, (status.waterMl / status.waterGoal) * 100);
 
@@ -33,21 +55,34 @@ export function Dashboard() {
           <img src="/icon.svg" alt="" className="logo" />
           {t.appName}
         </h1>
-        {status.pausedMin !== null ? (
-          <button className="secondary" onClick={api.resume}>
-            {t.resume} <small>{t.minutesLeft(status.pausedMin)}</small>
+        <div className="top-actions">
+          {status.pausedMin !== null ? (
+            <button className="secondary" onClick={api.resume}>
+              {t.resume} <small>{t.minutesLeft(status.pausedMin)}</small>
+            </button>
+          ) : (
+            <button className="secondary" onClick={() => api.pause(60)}>
+              {t.pauseHour}
+            </button>
+          )}
+          <button
+            className="secondary icon-button"
+            onClick={() => setView("settings")}
+            title={t.settings}
+            aria-label={t.settings}
+          >
+            ⚙
           </button>
-        ) : (
-          <button className="secondary" onClick={() => api.pause(60)}>
-            {t.pauseHour}
-          </button>
-        )}
+        </div>
       </header>
 
       {!status.inWorkHours && <div className="notice">{t.outsideHours}</div>}
       {status.busy && (
         <div className="notice">{status.busy === "call" ? `🎧 ${t.busyCall}` : `🖥️ ${t.busyFullscreen}`}</div>
       )}
+
+      <ScoreRow status={status} />
+      <FocusCard status={status} />
 
       <section className="cards">
         <article className="card water">
@@ -70,15 +105,29 @@ export function Dashboard() {
             {status.sittingMin} <small>{t.sittingFor}</small>
           </p>
           <p className="muted">{t.todaySummary(status.breaks, status.snoozes)}</p>
-          <p className="muted">{status.nextMoveMin !== null ? t.nextBreak(status.nextMoveMin) : t.off}</p>
+          <p className="muted">
+            {status.focus.phase === "focus" || status.focus.phase === "break"
+              ? t.focusHandlesBreaks
+              : status.nextMoveMin !== null
+                ? t.nextBreak(status.nextMoveMin)
+                : t.off}
+          </p>
           <button className="primary" onClick={api.takeBreak}>
             {t.takeBreakNow}
           </button>
         </article>
       </section>
 
+      <section className="panel exercises-card">
+        <h2>🧘 {t.exercisesCard}</h2>
+        <p className="muted">{t.exercisesCardBody}</p>
+        <button className="primary" onClick={() => setView("exercises")}>
+          {t.openExercises}
+        </button>
+      </section>
+
+      <WeekSummary history={history} streak={status.streak} />
       <Week history={history} goal={status.waterGoal} />
-      <SettingsForm />
     </main>
   );
 }
@@ -112,6 +161,7 @@ type BoolKey = { [K in keyof Settings]: Settings[K] extends boolean ? K : never 
 
 function SettingsForm() {
   const t = useT();
+  const lang = useLang();
   const [s, setS] = useState<Settings | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -148,8 +198,6 @@ function SettingsForm() {
 
   return (
     <section className="panel">
-      <h2>{t.settings}</h2>
-
       <fieldset>
         <legend>{t.water}</legend>
         {toggle("waterEnabled", t.waterEnabled)}
@@ -164,6 +212,37 @@ function SettingsForm() {
         {num("moveIntervalMin", t.moveInterval, t.unitMin)}
         {num("breakMin", t.breakLength, t.unitMin)}
         {num("idleResetMin", t.idleReset, t.unitMin)}
+        <label className="field">
+          <span>{t.breakRoutine}</span>
+          <select value={s.breakRoutine} onChange={(e) => set("breakRoutine", e.target.value)}>
+            {ROUTINES.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.icon} {text(r, lang).name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>{t.focusSection}</legend>
+        {num("pomodoroWorkMin", t.pomodoroWork, t.unitMin)}
+        {num("pomodoroShortMin", t.pomodoroShort, t.unitMin)}
+        {num("pomodoroLongMin", t.pomodoroLong, t.unitMin)}
+        {num("pomodoroRounds", t.pomodoroRounds, t.unitRounds)}
+        {toggle("focusAutoContinue", t.focusAutoContinue)}
+      </fieldset>
+
+      <fieldset>
+        <legend>{t.eyesSection}</legend>
+        {toggle("eyesEnabled", t.eyesEnabled)}
+        {num("eyesIntervalMin", t.eyesInterval, t.unitMin, 5)}
+      </fieldset>
+
+      <fieldset>
+        <legend>{t.goalsSection}</legend>
+        {num("breaksGoal", t.breaksGoal, t.unitTimes)}
+        {num("focusGoalMin", t.focusGoal, t.unitMin, 10)}
       </fieldset>
 
       <fieldset>

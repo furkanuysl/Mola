@@ -19,20 +19,14 @@ const tr = {
   doneTitle: "Mola tamam",
   doneBody: "Harika! Oturma sayacı sıfırlandı.",
   close: "Kapat",
-  tips: [
-    "Kalk ve birkaç dakika yürü.",
-    "Omuzlarını geriye doğru 10 kez çevir.",
-    "Başını yavaşça iki yana eğerek boynunu esnet.",
-    "Pencereden uzağa bak, gözlerini dinlendir.",
-    "Parmak uçlarında yükselip in, 15 kez.",
-    "Ellerini birleştirip yukarı uzan, 10 saniye tut.",
-  ],
+  secsLeft: (n: number) => `${n} sn`,
   errors: {
     nothing_to_skip: "Atlanacak su hatırlatması yok.",
     nothing_to_snooze: "Ertelenecek hatırlatma yok.",
     no_snoozes_left: "Erteleme hakkın bitti.",
     nothing_to_start: "Başlatılacak mola yok.",
     unknown_action: "Bilinmeyen işlem.",
+    unknown_technique: "Bilinmeyen odak tekniği.",
   } as Record<string, string>,
 
   // Panel
@@ -56,6 +50,26 @@ const tr = {
 
   // Ayarlar
   settings: "Ayarlar",
+  breakRoutine: "Molada yapılacak egzersizler",
+
+  // Egzersizler
+  exercises: "Egzersizler",
+  exercisesCard: "Duruş ve boyun egzersizleri",
+  exercisesCardBody: "Kamburluk, boyun ve sırt ağrısı için rehberli kısa rutinler.",
+  openExercises: "Egzersizlere git",
+  exercisesIntro: "Bir rutin seç; her hareket adım adım ve süreli olarak gösterilir.",
+  routineMeta: (count: number, min: number) => `${count} hareket · ~${min} dk`,
+  safetyNote:
+    "Hareketleri yavaş ve ağrısız aralıkta yap. Ağrı artarsa, kola yayılan uyuşma/karıncalanma ya da baş dönmesi olursa dur. Boyun fıtığı gibi bir tanın varsa yeni bir programa başlamadan önce doktoruna ya da fizyoterapistine danış.",
+  step: (i: number, n: number) => `Hareket ${i} / ${n}`,
+  previous: "Önceki",
+  next: "Sonraki",
+  pauseExercise: "Duraklat",
+  continueExercise: "Devam",
+  routineDone: "Rutin tamamlandı",
+  routineDoneBody: "Eline sağlık! Vücudun teşekkür ediyor.",
+  again: "Tekrar yap",
+  back: "Geri",
   waterEnabled: "Su hatırlatıcısı açık",
   waterInterval: "Hatırlatma aralığı",
   waterGoal: "Günlük hedef",
@@ -83,6 +97,75 @@ const tr = {
   unitMin: "dk",
   unitMl: "ml",
   unitTimes: "kez",
+
+  // Göz molası ve odak molası (hatırlatma penceresi)
+  eyesTitle: "Gözlerini dinlendir",
+  eyesBody: "20 saniye boyunca 6 metre uzaktaki bir noktaya bak, sık sık göz kırp.",
+  focusBreakTitle: "Odak molası",
+  doneFocusReady: "Mola bitti. Hazır olunca panelden sonraki odak turunu başlat.",
+  doneFocusStarted: "Mola bitti, sonraki odak turu başladı.",
+
+  // Odak
+  focus: "Odak",
+  focusToday: (min: number) => `Bugün ${min} dk`,
+  techniques: {
+    pomodoro: { name: "Pomodoro", desc: "25 dk odak, 5 dk mola; 4 turda bir 15 dk uzun mola. Süreleri ayarlardan değiştirebilirsin." },
+    "52_17": { name: "52/17", desc: "52 dk derin çalışma, 17 dk tam mola. En verimli çalışanların ritmi." },
+    "90_20": { name: "90/20", desc: "Vücudun doğal 90 dakikalık ritmi: 90 dk odak, 20 dk mola." },
+    flowtime: { name: "Flowtime", desc: "Sayaç yok: akışın bozulana kadar çalış, molayı sen başlat. Mola süresi çalıştığın süreye göre ayarlanır." },
+  } as Record<"pomodoro" | "52_17" | "90_20" | "flowtime", { name: string; desc: string }>,
+  round: (i: number, n: number) => `Tur ${i}/${n}`,
+  focusPaused: "duraklatıldı",
+  flowtimeHint: "Akıştasın. Yorulduğunda “Molaya geç”e bas.",
+  breakNow: "Molaya geç",
+  stop: "Bitir",
+  onBreak: "Moladasın",
+  focusBreakHint: "Mola penceresindeki hareketleri takip et.",
+  readyForNext: (round: number, rounds: number | null) =>
+    rounds ? `Mola bitti. Sıradaki: tur ${round}/${rounds}.` : "Mola bitti. Hazır olunca devam et.",
+  startFocus: "Odaklanmaya başla",
+  startNextRound: "Sonraki turu başlat",
+  focusHandlesBreaks: "Odak sürerken molaları odak zamanlayıcısı verir.",
+
+  // Skor ve seri
+  todayScore: "Bugünün skoru",
+  goodDay: "Harika gidiyorsun, bugün iyi bir gün! ✨",
+  scoreHint: (n: number) => `Su, mola ve odak hedeflerinle hesaplanır. ${n} ve üstü iyi gün sayılır.`,
+  streak: (n: number) => `${n} günlük seri`,
+  streakKeep: "Seriyi bozma, bugün de hedefini tuttur.",
+  streakStart: "Bugün skorunu 70'e çıkar, seriyi başlat.",
+
+  // Haftalık özet
+  weekTitle: "Bu haftan",
+  unitHour: "sa",
+  breaksLabel: "Mola",
+  goodDays: "İyi gün",
+  bestDay: "En iyi gün",
+  copySummary: "📋 Özeti kopyala",
+  copied: "Kopyalandı ✓",
+
+  // Nefes
+  breathing: "Nefes egzersizleri",
+  routines: "Hareket rutinleri",
+  breathMeta: (pattern: string, cycles: number) => `${pattern} · ${cycles} tur`,
+  breathDone: "Güzel. Nefesin sakinleşti.",
+  cycle: (i: number, n: number) => `Tur ${i} / ${n}`,
+  breathSteps: { inhale: "Nefes al", hold: "Tut", exhale: "Nefes ver", holdOut: "Bekle" },
+
+  // Ayarlar (yeni)
+  focusSection: "Odak (Pomodoro)",
+  pomodoroWork: "Odak süresi",
+  pomodoroShort: "Kısa mola",
+  pomodoroLong: "Uzun mola",
+  pomodoroRounds: "Uzun mola her",
+  unitRounds: "turda",
+  focusAutoContinue: "Mola bitince sonraki turu kendiliğinden başlat",
+  eyesSection: "Göz molası (20-20-20)",
+  eyesEnabled: "Göz molası hatırlatıcısı açık",
+  eyesInterval: "Hatırlatma aralığı",
+  goalsSection: "Günlük hedefler (skor)",
+  breaksGoal: "Günlük mola hedefi",
+  focusGoal: "Günlük odak hedefi",
 };
 
 export type Dict = typeof tr;
@@ -103,20 +186,14 @@ const en: Dict = {
   doneTitle: "Break done",
   doneBody: "Nice! Your sitting timer has been reset.",
   close: "Close",
-  tips: [
-    "Stand up and walk for a few minutes.",
-    "Roll your shoulders backwards 10 times.",
-    "Gently tilt your head side to side to stretch your neck.",
-    "Look out the window and rest your eyes.",
-    "Rise onto your toes and back down, 15 times.",
-    "Clasp your hands and reach up, hold for 10 seconds.",
-  ],
+  secsLeft: (n) => `${n} s`,
   errors: {
     nothing_to_skip: "There is no water reminder to skip.",
     nothing_to_snooze: "There is no reminder to snooze.",
     no_snoozes_left: "No snoozes left.",
     nothing_to_start: "There is no break to start.",
     unknown_action: "Unknown action.",
+    unknown_technique: "Unknown focus technique.",
   },
 
   pauseHour: "Pause for 1 hour",
@@ -138,6 +215,25 @@ const en: Dict = {
   dayTooltip: (date, ml, breaks) => `${date}: ${ml} ml, ${breaks} breaks`,
 
   settings: "Settings",
+  breakRoutine: "Exercises during breaks",
+
+  exercises: "Exercises",
+  exercisesCard: "Posture and neck exercises",
+  exercisesCardBody: "Short guided routines for hunched posture, neck and back pain.",
+  openExercises: "Go to exercises",
+  exercisesIntro: "Pick a routine; each move is shown step by step with a timer.",
+  routineMeta: (count, min) => `${count} moves · ~${min} min`,
+  safetyNote:
+    "Move slowly and stay within a pain-free range. Stop if pain gets worse, or if you feel numbness/tingling down your arm or dizziness. If you have a diagnosed condition such as a herniated disc, check with your doctor or physiotherapist before starting a new routine.",
+  step: (i, n) => `Move ${i} of ${n}`,
+  previous: "Previous",
+  next: "Next",
+  pauseExercise: "Pause",
+  continueExercise: "Continue",
+  routineDone: "Routine complete",
+  routineDoneBody: "Well done! Your body thanks you.",
+  again: "Do it again",
+  back: "Back",
   waterEnabled: "Water reminder on",
   waterInterval: "Reminder interval",
   waterGoal: "Daily goal",
@@ -165,6 +261,68 @@ const en: Dict = {
   unitMin: "min",
   unitMl: "ml",
   unitTimes: "×",
+
+  eyesTitle: "Rest your eyes",
+  eyesBody: "Look at something 6 metres (20 feet) away for 20 seconds and blink often.",
+  focusBreakTitle: "Focus break",
+  doneFocusReady: "Break over. Start the next focus round from the dashboard when you're ready.",
+  doneFocusStarted: "Break over, the next focus round has started.",
+
+  focus: "Focus",
+  focusToday: (min) => `${min} min today`,
+  techniques: {
+    pomodoro: { name: "Pomodoro", desc: "25 min focus, 5 min break; a 15 min long break every 4 rounds. Adjust the times in settings." },
+    "52_17": { name: "52/17", desc: "52 min of deep work, 17 min of real rest. The rhythm of top performers." },
+    "90_20": { name: "90/20", desc: "Your body's natural 90-minute rhythm: 90 min focus, 20 min break." },
+    flowtime: { name: "Flowtime", desc: "No timer: work until your flow breaks, then take a break. Its length scales with how long you worked." },
+  },
+  round: (i, n) => `Round ${i}/${n}`,
+  focusPaused: "paused",
+  flowtimeHint: "You're in the flow. Press “Take a break” when you get tired.",
+  breakNow: "Take a break",
+  stop: "Stop",
+  onBreak: "On a break",
+  focusBreakHint: "Follow the moves in the break window.",
+  readyForNext: (round, rounds) => (rounds ? `Break over. Up next: round ${round}/${rounds}.` : "Break over. Continue when ready."),
+  startFocus: "Start focusing",
+  startNextRound: "Start next round",
+  focusHandlesBreaks: "While focusing, breaks come from the focus timer.",
+
+  todayScore: "Today's score",
+  goodDay: "You're doing great, today is a good day! ✨",
+  scoreHint: (n) => `Based on your water, break and focus goals. ${n}+ counts as a good day.`,
+  streak: (n) => `${n}-day streak`,
+  streakKeep: "Keep it going, hit your goal today too.",
+  streakStart: "Get today's score to 70 to start a streak.",
+
+  weekTitle: "Your week",
+  unitHour: "h",
+  breaksLabel: "Breaks",
+  goodDays: "Good days",
+  bestDay: "Best day",
+  copySummary: "📋 Copy summary",
+  copied: "Copied ✓",
+
+  breathing: "Breathing exercises",
+  routines: "Movement routines",
+  breathMeta: (pattern, cycles) => `${pattern} · ${cycles} rounds`,
+  breathDone: "Nice. Your breathing has settled.",
+  cycle: (i, n) => `Round ${i} of ${n}`,
+  breathSteps: { inhale: "Breathe in", hold: "Hold", exhale: "Breathe out", holdOut: "Wait" },
+
+  focusSection: "Focus (Pomodoro)",
+  pomodoroWork: "Focus length",
+  pomodoroShort: "Short break",
+  pomodoroLong: "Long break",
+  pomodoroRounds: "Long break every",
+  unitRounds: "rounds",
+  focusAutoContinue: "Start the next round automatically after a break",
+  eyesSection: "Eye break (20-20-20)",
+  eyesEnabled: "Eye break reminder on",
+  eyesInterval: "Reminder interval",
+  goalsSection: "Daily goals (score)",
+  breaksGoal: "Daily break goal",
+  focusGoal: "Daily focus goal",
 };
 
 export const dictionaries: Record<Lang, Dict> = { tr, en };

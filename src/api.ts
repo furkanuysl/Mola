@@ -1,7 +1,19 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { Lang } from "./i18n";
 
-export type Kind = "water" | "move";
+export type Kind = "water" | "move" | "eyes";
+export type Technique = "pomodoro" | "52_17" | "90_20" | "flowtime";
+
+export interface FocusView {
+  technique: Technique;
+  phase: "off" | "focus" | "break" | "ready";
+  elapsed: number;
+  target: number | null;
+  paused: boolean;
+  round: number;
+  rounds: number | null;
+  breakRemaining: number | null;
+}
 
 export interface ReminderView {
   kind: Kind;
@@ -14,6 +26,9 @@ export interface ReminderView {
   waterToday: number;
   waterGoal: number;
   sittingMin: number;
+  breakRoutine: string;
+  focusBreak: boolean;
+  focusNext: "" | "ready" | "started";
 }
 
 export interface Status {
@@ -28,6 +43,10 @@ export interface Status {
   pausedMin: number | null;
   inWorkHours: boolean;
   busy: "fullscreen" | "call" | null;
+  focusMin: number;
+  score: number;
+  streak: number;
+  focus: FocusView;
 }
 
 export interface Settings {
@@ -49,6 +68,17 @@ export interface Settings {
   quietInFullscreen: boolean;
   quietInCalls: boolean;
   language: "auto" | Lang;
+  breakRoutine: string;
+  eyesEnabled: boolean;
+  eyesIntervalMin: number;
+  focusTechnique: Technique;
+  pomodoroWorkMin: number;
+  pomodoroShortMin: number;
+  pomodoroLongMin: number;
+  pomodoroRounds: number;
+  focusAutoContinue: boolean;
+  breaksGoal: number;
+  focusGoalMin: number;
 }
 
 export interface HistoryDay {
@@ -57,6 +87,9 @@ export interface HistoryDay {
   glasses: number;
   breaks: number;
   snoozes: number;
+  focusSecs: number;
+  focusSessions: number;
+  score: number;
 }
 
 export type ReminderAction = "drink" | "skip" | "snooze" | "start_break" | "dismiss";
@@ -73,4 +106,8 @@ export const api = {
   takeBreak: () => invoke<void>("take_break"),
   pause: (minutes: number) => invoke<void>("pause", { minutes }),
   resume: () => invoke<void>("resume"),
+  focusStart: (technique: Technique) => invoke<void>("focus_start", { technique }),
+  focusPause: (paused: boolean) => invoke<void>("focus_pause", { paused }),
+  focusStop: () => invoke<void>("focus_stop"),
+  focusBreakNow: () => invoke<void>("focus_break_now"),
 };

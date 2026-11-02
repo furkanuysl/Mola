@@ -7,12 +7,15 @@ use crate::store::Settings;
 
 /// "Mola bitti" ekranı bu kadar saniye sonra kendiliğinden kapanır.
 const DONE_VISIBLE_SECS: u64 = 4;
+/// 20-20-20 kuralı: 20 saniye uzağa bakılır.
+pub const EYES_SECS: u64 = 20;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Kind {
     Water,
     Move,
+    Eyes,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -41,10 +44,16 @@ pub struct Effects {
 pub struct Engine {
     pub water_elapsed: u64,
     pub sitting: u64,
+    pub eyes_elapsed: u64,
+    /// Süren molanın toplam uzunluğu (saniye).
+    pub break_total: u64,
+    /// Odak oturumu sürerken ayrı hareket hatırlatması açılmaz; molayı odak zamanlayıcısı verir.
+    pub focus_active: bool,
     pub water_snoozes: u32,
     pub move_snoozes: u32,
     pub active: Option<Active>,
-    break_requested: bool,
+    /// İstenen molanın süresi; bir sonraki tick'te başlar.
+    break_requested: Option<u64>,
     /// Kullanıcı meşgulken açık hatırlatmanın penceresi gizlenir.
     hidden: bool,
 }
@@ -61,6 +70,9 @@ impl Engine {
                     fx.changed = true;
                     if remaining > 1 {
                         self.set_phase(Phase::Break { remaining: remaining - 1 });
+                    } else if active.kind == Kind::Eyes {
+                        self.eyes_elapsed = 0;
+                        self.close(&mut fx);
                     } else {
                         self.complete_break(&mut fx);
                         self.set_phase(Phase::Done { shown_for: 0 });
@@ -79,15 +91,8 @@ impl Engine {
             }
         }
 
-        if self.break_requested {
-            self.break_requested = false;
-            self.active = Some(Active {
-                kind: Kind::Move,
-                phase: Phase::Break { remaining: break_secs(s) },
-            });
-            self.hidden = false;
-            fx.show = true;
-            fx.changed = true;
+        if let Some(secs) = self.break_requested.take() {
+            self.begin(Kind::Move, Phase::Break { remaining: secs }, secs, &mut fx);
             return fx;
         }
 
@@ -111,6 +116,7 @@ impl Engine {
             }
             self.sitting = 0;
             self.move_snoozes = 0;
+            self.eyes_elapsed = 0;
         }
 
         if !running {
@@ -123,24 +129,29 @@ impl Engine {
         if s.move_enabled && !away && !self.is_active(Kind::Move) {
             self.sitting += 1;
         }
+        if s.eyes_enabled && !away && !self.is_active(Kind::Eyes) {
+            self.eyes_elapsed += 1;
+        }
 
         if self.active.is_none() && !busy {
-            if s.move_enabled && self.sitting >= mins(s.move_interval_min) {
+            if s.move_enabled && !self.focus_active && self.sitting >= mins(s.move_interval_min) {
                 self.open(Kind::Move, &mut fx);
             } else if s.water_enabled && self.water_elapsed >= mins(s.water_interval_min) {
                 self.open(Kind::Water, &mut fx);
+            } else if s.eyes_enabled && self.eyes_elapsed >= mins(s.eyes_interval_min) {
+                self.begin(Kind::Eyes, Phase::Break { remaining: EYES_SECS }, EYES_SECS, &mut fx);
             }
         }
         fx
     }
 
-    /// Bir sonraki tick'te mola geri sayımını başlatır (zaten moladaysa yok sayılır).
-    pub fn request_break(&mut self) {
-        let in_break = self
-            .active
-            .is_some_and(|a| matches!(a.phase, Phase::Break { .. } | Phase::Done { .. }));
+    /// Bir sonraki tick'te `secs` saniyelik mola başlatır (zaten hareket molasındaysa yok sayılır).
+    pub fn request_break(&mut self, secs: u64) {
+        let in_break = self.active.is_some_and(|a| {
+            a.kind == Kind::Move && matches!(a.phase, Phase::Break { .. } | Phase::Done { .. })
+        });
         if !in_break {
-            self.break_requested = true;
+            self.break_requested = Some(secs.max(1));
         }
     }
 
@@ -154,13 +165,17 @@ impl Engine {
         fx
     }
 
-    pub fn skip_water(&mut self) -> Result<Effects, String> {
-        if self.prompt_kind() != Some(Kind::Water) {
-            return Err("nothing_to_skip".into());
-        }
+    /// Su hatırlatmasını ya da göz molasını atlar.
+    pub fn skip(&mut self) -> Result<Effects, String> {
         let mut fx = Effects::default();
-        self.water_elapsed = 0;
-        self.water_snoozes = 0;
+        match self.active {
+            Some(Active { kind: Kind::Water, phase: Phase::Prompt }) => {
+                self.water_elapsed = 0;
+                self.water_snoozes = 0;
+            }
+            Some(Active { kind: Kind::Eyes, .. }) => self.eyes_elapsed = 0,
+            _ => return Err("nothing_to_skip".into()),
+        }
         self.close(&mut fx);
         Ok(fx)
     }
@@ -181,6 +196,7 @@ impl Engine {
                 self.move_snoozes += 1;
                 self.sitting = mins(s.move_interval_min).saturating_sub(snooze);
             }
+            Kind::Eyes => return Err("nothing_to_snooze".into()),
         }
         let mut fx = Effects { stats: true, ..Default::default() };
         self.close(&mut fx);
@@ -191,7 +207,8 @@ impl Engine {
         if self.prompt_kind() != Some(Kind::Move) {
             return Err("nothing_to_start".into());
         }
-        self.set_phase(Phase::Break { remaining: break_secs(s) });
+        self.break_total = break_secs(s);
+        self.set_phase(Phase::Break { remaining: self.break_total });
         Ok(Effects { changed: true, ..Default::default() })
     }
 
@@ -207,6 +224,7 @@ impl Engine {
         let used = match kind {
             Kind::Water => self.water_snoozes,
             Kind::Move => self.move_snoozes,
+            Kind::Eyes => return 0,
         };
         s.max_snoozes.saturating_sub(used)
     }
@@ -223,7 +241,14 @@ impl Engine {
     }
 
     fn open(&mut self, kind: Kind, fx: &mut Effects) {
-        self.active = Some(Active { kind, phase: Phase::Prompt });
+        self.begin(kind, Phase::Prompt, 0, fx);
+    }
+
+    fn begin(&mut self, kind: Kind, phase: Phase, break_total: u64, fx: &mut Effects) {
+        self.active = Some(Active { kind, phase });
+        if break_total > 0 {
+            self.break_total = break_total;
+        }
         self.hidden = false;
         fx.show = true;
         fx.changed = true;
@@ -245,6 +270,7 @@ impl Engine {
     fn complete_break(&mut self, fx: &mut Effects) {
         self.sitting = 0;
         self.move_snoozes = 0;
+        self.eyes_elapsed = 0;
         fx.break_done = true;
     }
 }
@@ -253,7 +279,7 @@ fn mins(m: u32) -> u64 {
     m as u64 * 60
 }
 
-fn break_secs(s: &Settings) -> u64 {
+pub fn break_secs(s: &Settings) -> u64 {
     mins(s.break_min).max(1)
 }
 
@@ -269,6 +295,7 @@ mod tests {
             idle_reset_min: 1,
             snooze_min: 1,
             max_snoozes: 2,
+            eyes_enabled: false,
             ..Settings::default()
         }
     }
@@ -372,6 +399,59 @@ mod tests {
         assert!(e.active.is_some());
         let fx = e.tick(&s, 0, true, false);
         assert!(fx.show && !fx.hide);
+    }
+
+    fn eyes_settings() -> Settings {
+        Settings {
+            water_enabled: false,
+            move_enabled: false,
+            eyes_enabled: true,
+            eyes_interval_min: 1,
+            ..settings()
+        }
+    }
+
+    #[test]
+    fn eyes_break_counts_down_and_closes_without_resetting_sitting() {
+        let s = eyes_settings();
+        let mut e = Engine::default();
+        run(&mut e, &s, 59, 0);
+        assert!(e.active.is_none());
+        assert!(e.tick(&s, 0, true, false).show);
+        assert_eq!(e.active.unwrap().kind, Kind::Eyes);
+        run(&mut e, &s, EYES_SECS, 0);
+        assert!(e.active.is_none());
+        assert_eq!(e.eyes_elapsed, 0);
+    }
+
+    #[test]
+    fn eyes_break_can_be_skipped() {
+        let s = eyes_settings();
+        let mut e = Engine::default();
+        run(&mut e, &s, 60, 0);
+        assert!(e.skip().is_ok());
+        assert!(e.active.is_none());
+    }
+
+    #[test]
+    fn requested_break_uses_given_length_and_resets_sitting() {
+        let s = Settings { water_enabled: false, ..settings() };
+        let mut e = Engine::default();
+        run(&mut e, &s, 100, 0);
+        e.request_break(10);
+        e.tick(&s, 0, true, false);
+        assert_eq!(e.break_total, 10);
+        let done = (0..10).any(|_| e.tick(&s, 0, true, false).break_done);
+        assert!(done);
+        assert_eq!(e.sitting, 0);
+    }
+
+    #[test]
+    fn focus_session_suppresses_move_prompt() {
+        let s = Settings { water_enabled: false, ..settings() };
+        let mut e = Engine { focus_active: true, ..Engine::default() };
+        run(&mut e, &s, 400, 0);
+        assert!(e.active.is_none());
     }
 
     #[test]

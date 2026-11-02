@@ -34,6 +34,23 @@ pub struct Settings {
     pub quiet_in_calls: bool,
     /// "auto", "tr" veya "en".
     pub language: String,
+    /// Mola sırasında gösterilen egzersiz rutini (src/exerciseData.ts içindeki kimlikler).
+    pub break_routine: String,
+    /// 20-20-20 göz molası.
+    pub eyes_enabled: bool,
+    pub eyes_interval_min: u32,
+    /// "pomodoro", "52_17", "90_20" ya da "flowtime".
+    pub focus_technique: String,
+    pub pomodoro_work_min: u32,
+    pub pomodoro_short_min: u32,
+    pub pomodoro_long_min: u32,
+    /// Kaç turda bir uzun mola verilir.
+    pub pomodoro_rounds: u32,
+    /// Mola bitince sonraki odak turu kendiliğinden başlasın.
+    pub focus_auto_continue: bool,
+    /// Günlük skor hedefleri.
+    pub breaks_goal: u32,
+    pub focus_goal_min: u32,
 }
 
 impl Default for Settings {
@@ -57,6 +74,17 @@ impl Default for Settings {
             quiet_in_fullscreen: true,
             quiet_in_calls: true,
             language: "auto".into(),
+            break_routine: "mixed".into(),
+            eyes_enabled: true,
+            eyes_interval_min: 20,
+            focus_technique: "pomodoro".into(),
+            pomodoro_work_min: 25,
+            pomodoro_short_min: 5,
+            pomodoro_long_min: 15,
+            pomodoro_rounds: 4,
+            focus_auto_continue: false,
+            breaks_goal: 6,
+            focus_goal_min: 120,
         }
     }
 }
@@ -74,6 +102,19 @@ impl Settings {
         if !matches!(self.language.as_str(), "auto" | "tr" | "en") {
             self.language = "auto".into();
         }
+        if !matches!(self.break_routine.as_str(), "mixed" | "posture" | "neck" | "back" | "quick") {
+            self.break_routine = "mixed".into();
+        }
+        self.eyes_interval_min = self.eyes_interval_min.clamp(5, 120);
+        if crate::focus::Technique::parse(&self.focus_technique).is_none() {
+            self.focus_technique = "pomodoro".into();
+        }
+        self.pomodoro_work_min = self.pomodoro_work_min.clamp(1, 180);
+        self.pomodoro_short_min = self.pomodoro_short_min.clamp(1, 60);
+        self.pomodoro_long_min = self.pomodoro_long_min.clamp(1, 90);
+        self.pomodoro_rounds = self.pomodoro_rounds.clamp(1, 12);
+        self.breaks_goal = self.breaks_goal.clamp(1, 30);
+        self.focus_goal_min = self.focus_goal_min.clamp(10, 720);
         self
     }
 
@@ -106,6 +147,53 @@ pub struct DayStats {
     pub glasses: u32,
     pub breaks: u32,
     pub snoozes: u32,
+    pub focus_secs: u32,
+    pub focus_sessions: u32,
+}
+
+/// Bu skorun üstündeki günler "iyi gün" sayılır ve seriyi sürdürür.
+pub const GOOD_DAY_SCORE: u32 = 70;
+
+/// Günün 0–100 arası skoru: açık olan hedeflerin (su, mola, kullanıldıysa odak) ortalaması.
+pub fn day_score(d: &DayStats, s: &Settings) -> u32 {
+    let ratio = |value: u32, goal: u32| (value as f64 / goal.max(1) as f64).min(1.0);
+    let mut parts = Vec::new();
+    if s.water_enabled {
+        parts.push(ratio(d.water_ml, s.water_goal_ml));
+    }
+    if s.move_enabled {
+        parts.push(ratio(d.breaks, s.breaks_goal));
+    }
+    if d.focus_secs > 0 {
+        parts.push(ratio(d.focus_secs / 60, s.focus_goal_min));
+    }
+    if parts.is_empty() {
+        return 0;
+    }
+    (parts.iter().sum::<f64>() / parts.len() as f64 * 100.0).round() as u32
+}
+
+/// Bugünden geriye kesintisiz "iyi gün" sayısı. Bugün henüz bitmediği için iyi değilse seriyi
+/// bozmaz; yalnızca hafta içi çalışılıyorsa hafta sonları atlanır.
+pub fn streak(history: &History, s: &Settings, today: NaiveDate) -> u32 {
+    let good = |date: NaiveDate| {
+        history
+            .get(&day_key(date))
+            .is_some_and(|d| day_score(d, s) >= GOOD_DAY_SCORE)
+    };
+    let mut count = 0;
+    let mut date = today;
+    for i in 0..366 {
+        let weekend = date.weekday().number_from_monday() > 5;
+        if good(date) {
+            count += 1;
+        } else if !(i == 0 || (s.weekdays_only && weekend)) {
+            break;
+        }
+        let Some(prev) = date.pred_opt() else { break };
+        date = prev;
+    }
+    count
 }
 
 /// Gün anahtarı ("YYYY-MM-DD") → o günün istatistikleri.
@@ -152,5 +240,40 @@ fn write_json<T: Serialize>(path: &Path, value: &T) {
     let tmp = path.with_extension("json.tmp");
     if fs::write(&tmp, json).is_ok() {
         let _ = fs::rename(&tmp, path);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn good() -> DayStats {
+        DayStats { water_ml: 2500, breaks: 6, ..DayStats::default() }
+    }
+
+    #[test]
+    fn score_averages_enabled_goals() {
+        let s = Settings::default();
+        assert_eq!(day_score(&good(), &s), 100);
+        let half = DayStats { water_ml: 1250, breaks: 3, ..DayStats::default() };
+        assert_eq!(day_score(&half, &s), 50);
+        let no_water = Settings { water_enabled: false, ..Settings::default() };
+        assert_eq!(day_score(&half, &no_water), 50);
+    }
+
+    #[test]
+    fn streak_skips_unfinished_today_and_weekends() {
+        let s = Settings::default();
+        // 2026-11-02 Pazartesi; 31 Ekim–1 Kasım hafta sonu.
+        let today = NaiveDate::from_ymd_opt(2026, 11, 2).unwrap();
+        let mut h = History::new();
+        for d in ["2026-10-28", "2026-10-29", "2026-10-30"] {
+            h.insert(d.into(), good());
+        }
+        assert_eq!(streak(&h, &s, today), 3);
+        h.insert("2026-11-02".into(), good());
+        assert_eq!(streak(&h, &s, today), 4);
+        h.remove("2026-10-29");
+        assert_eq!(streak(&h, &s, today), 2);
     }
 }

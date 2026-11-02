@@ -1,5 +1,6 @@
 mod busy;
 mod engine;
+mod focus;
 mod i18n;
 mod idle;
 mod store;
@@ -19,10 +20,11 @@ use tauri::{
 };
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 
-use engine::{Effects, Engine, Kind, Phase};
+use engine::{break_secs, Effects, Engine, Kind, Phase};
+use focus::{Focus, Technique};
 use busy::Busy;
 use i18n::Lang;
-use store::{day_key, DayStats, History, Settings, Store};
+use store::{day_key, day_score, streak, DayStats, History, Settings, Store};
 
 const APP_NAME: &str = "Mola";
 const TRAY_ID: &str = "main";
@@ -33,6 +35,7 @@ struct Inner {
     settings: Settings,
     history: History,
     engine: Engine,
+    focus: Focus,
     paused_until: Option<Instant>,
     lang: Lang,
     busy: Option<Busy>,
@@ -59,6 +62,24 @@ struct ReminderView {
     water_today: u32,
     water_goal: u32,
     sitting_min: u64,
+    break_routine: String,
+    /// Süren mola, odak zamanlayıcısının verdiği moladır.
+    focus_break: bool,
+    /// Sonraki odak turu kullanıcıyı bekliyor / kendiliğinden başladı.
+    focus_next: &'static str,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct FocusView {
+    technique: Technique,
+    phase: focus::Phase,
+    elapsed: u64,
+    target: Option<u64>,
+    paused: bool,
+    round: u32,
+    rounds: Option<u32>,
+    break_remaining: Option<u64>,
 }
 
 #[derive(Clone, Serialize)]
@@ -75,12 +96,17 @@ struct Status {
     paused_min: Option<u64>,
     in_work_hours: bool,
     busy: Option<Busy>,
+    focus_min: u32,
+    score: u32,
+    streak: u32,
+    focus: FocusView,
 }
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct HistoryDay {
     date: String,
+    score: u32,
     #[serde(flatten)]
     stats: DayStats,
 }
@@ -120,14 +146,43 @@ impl Inner {
             kind: active.kind,
             phase,
             break_remaining,
-            break_total: s.break_min as u64 * 60,
+            break_total: self.engine.break_total,
             snoozes_left: self.engine.snoozes_left(active.kind, s),
             snooze_min: s.snooze_min,
             glass_ml: s.glass_ml,
             water_today: self.today().water_ml,
             water_goal: s.water_goal_ml,
             sitting_min: self.engine.sitting / 60,
+            break_routine: s.break_routine.clone(),
+            focus_break: active.kind == Kind::Move && self.focus.phase == focus::Phase::Break,
+            focus_next: match self.focus.phase {
+                focus::Phase::Ready => "ready",
+                focus::Phase::Focus => "started",
+                _ => "",
+            },
         })
+    }
+
+    fn focus_view(&self) -> FocusView {
+        let f = &self.focus;
+        let break_remaining = match self.engine.active {
+            Some(engine::Active { kind: Kind::Move, phase: Phase::Break { remaining } })
+                if f.phase == focus::Phase::Break =>
+            {
+                Some(remaining)
+            }
+            _ => None,
+        };
+        FocusView {
+            technique: f.technique,
+            phase: f.phase,
+            elapsed: f.elapsed,
+            target: f.target_secs(&self.settings),
+            paused: f.paused,
+            round: f.completed + u32::from(f.phase != focus::Phase::Break),
+            rounds: (f.technique == Technique::Pomodoro).then_some(self.settings.pomodoro_rounds),
+            break_remaining,
+        }
     }
 
     fn status(&self) -> Status {
@@ -153,6 +208,10 @@ impl Inner {
                 .map(|t| t.saturating_duration_since(Instant::now()).as_secs().div_ceil(60)),
             in_work_hours: s.in_work_hours(Local::now()),
             busy: self.busy,
+            focus_min: today.focus_secs / 60,
+            score: day_score(&today, s),
+            streak: streak(&self.history, s, Local::now().date_naive()),
+            focus: self.focus_view(),
         }
     }
 
@@ -246,7 +305,29 @@ fn start_ticker(app: AppHandle) {
             let s = &inner.settings;
             inner.busy = busy::detect(s.quiet_in_fullscreen, s.quiet_in_calls);
             let busy = inner.busy.is_some();
-            (inner.engine.tick(&inner.settings, idle, running, busy), ())
+
+            let focus = inner.focus.tick(&inner.settings, busy);
+            if focus.counted {
+                let day = inner.today_mut();
+                day.focus_secs += 1;
+            }
+            if let Some(secs) = focus.break_due {
+                inner.today_mut().focus_sessions += 1;
+                inner.engine.request_break(secs);
+            }
+            inner.engine.focus_active = inner.focus.is_active();
+
+            let mut fx = inner.engine.tick(&inner.settings, idle, running, busy);
+            if fx.break_done {
+                inner.focus.break_finished(&inner.settings);
+                inner.engine.focus_active = inner.focus.is_active();
+            }
+            // Odak süresi dakikada bir ve tur bitince diske yazılır.
+            let focus_secs = inner.today().focus_secs;
+            if focus.break_due.is_some() || (focus.counted && focus_secs % 60 == 0) {
+                fx.stats = true;
+            }
+            (fx, ())
         });
     });
 }
@@ -275,7 +356,7 @@ fn get_history(state: State<AppState>, days: u32) -> Vec<HistoryDay> {
         .map(|i| {
             let date = day_key(today - TimeDelta::days(i));
             let stats = inner.history.get(&date).copied().unwrap_or_default();
-            HistoryDay { date, stats }
+            HistoryDay { date, score: day_score(&stats, &inner.settings), stats }
         })
         .collect()
 }
@@ -317,7 +398,7 @@ fn reminder_action(app: AppHandle, action: String) -> Result<(), String> {
     update(&app, |inner| {
         let result = match action.as_str() {
             "drink" => Ok(inner.add_glass()),
-            "skip" => inner.engine.skip_water(),
+            "skip" => inner.engine.skip(),
             "snooze" => inner.engine.snooze(&inner.settings).map(|fx| {
                 inner.today_mut().snoozes += 1;
                 fx
@@ -341,7 +422,8 @@ fn add_water(app: AppHandle) {
 #[tauri::command]
 fn take_break(app: AppHandle) {
     update(&app, |inner| {
-        inner.engine.request_break();
+        let secs = break_secs(&inner.settings);
+        inner.engine.request_break(secs);
         (Effects::default(), ())
     });
 }
@@ -362,6 +444,71 @@ fn resume(app: AppHandle) {
     });
 }
 
+#[tauri::command]
+fn focus_start(app: AppHandle, technique: String) -> Result<(), String> {
+    let technique = Technique::parse(&technique).ok_or("unknown_technique")?;
+    let settings = update(&app, |inner| {
+        inner.focus.start(technique);
+        inner.engine.focus_active = true;
+        inner.settings.focus_technique = technique_id(technique).into();
+        (Effects { changed: true, ..Default::default() }, inner.settings.clone())
+    });
+    app.state::<AppState>().store.save_settings(&settings);
+    Ok(())
+}
+
+fn technique_id(t: Technique) -> &'static str {
+    match t {
+        Technique::Pomodoro => "pomodoro",
+        Technique::Fifty2 => "52_17",
+        Technique::Ninety => "90_20",
+        Technique::Flowtime => "flowtime",
+    }
+}
+
+#[tauri::command]
+fn focus_pause(app: AppHandle, paused: bool) {
+    update(&app, |inner| {
+        inner.focus.paused = paused;
+        (Effects::default(), ())
+    });
+}
+
+#[tauri::command]
+fn focus_stop(app: AppHandle) {
+    update(&app, |inner| {
+        inner.focus.stop();
+        inner.engine.focus_active = false;
+        (Effects { stats: true, ..Default::default() }, ())
+    });
+}
+
+/// Odağı erken bitirip molaya geçer (Flowtime'da molanın tek yolu budur).
+#[tauri::command]
+fn focus_break_now(app: AppHandle) {
+    update(&app, |inner| {
+        if let Some(secs) = inner.focus.break_now(&inner.settings) {
+            inner.today_mut().focus_sessions += 1;
+            inner.engine.request_break(secs);
+        }
+        (Effects { stats: true, ..Default::default() }, ())
+    });
+}
+
+/// Tepsiden: odak yoksa ayarlı teknikle başlatır, varsa durdurur.
+fn focus_toggle(app: &AppHandle) {
+    let (active, technique) = {
+        let state = app.state::<AppState>();
+        let inner = state.inner.lock().unwrap();
+        (inner.focus.is_active(), inner.settings.focus_technique.clone())
+    };
+    if active {
+        focus_stop(app.clone());
+    } else {
+        let _ = focus_start(app.clone(), technique);
+    }
+}
+
 /// Tepsi menüsünü verilen dilde kurar; durum satırını ayrıca döndürür ki metni güncellenebilsin.
 fn build_menu(app: &AppHandle, lang: Lang) -> tauri::Result<(Menu<Wry>, MenuItem<Wry>)> {
     let t = lang.texts();
@@ -373,6 +520,7 @@ fn build_menu(app: &AppHandle, lang: Lang) -> tauri::Result<(Menu<Wry>, MenuItem
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "water", t.water_done, true, None::<&str>)?,
             &MenuItem::with_id(app, "break", t.take_break, true, None::<&str>)?,
+            &MenuItem::with_id(app, "focus", t.focus_toggle, true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "pause", t.pause_hour, true, None::<&str>)?,
             &MenuItem::with_id(app, "resume", t.resume, true, None::<&str>)?,
@@ -393,6 +541,7 @@ fn build_tray(app: &AppHandle, lang: Lang) -> tauri::Result<MenuItem<Wry>> {
         .on_menu_event(|app, event| match event.id().as_ref() {
             "water" => add_water(app.clone()),
             "break" => take_break(app.clone()),
+            "focus" => focus_toggle(app),
             "pause" => pause(app.clone(), 60),
             "resume" => resume(app.clone()),
             "open" => show_main(app),
@@ -440,6 +589,7 @@ pub fn run() {
                     settings,
                     history,
                     engine: Engine::default(),
+                    focus: Focus::default(),
                     paused_until: None,
                     lang,
                     busy: None,
@@ -480,7 +630,11 @@ pub fn run() {
             add_water,
             take_break,
             pause,
-            resume
+            resume,
+            focus_start,
+            focus_pause,
+            focus_stop,
+            focus_break_now
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

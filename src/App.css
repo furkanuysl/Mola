@@ -199,6 +199,26 @@ button:disabled {
   font-size: 22px;
 }
 
+.top-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.icon-button {
+  padding: 8px 11px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.top.sub {
+  justify-content: flex-start;
+  gap: 4px;
+}
+
+.back {
+  padding-left: 0;
+}
+
 .notice {
   padding: 10px 14px;
   border-radius: var(--radius);
@@ -375,4 +395,292 @@ select {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 5px 8px;
+}
+
+/* ---------- Egzersizler ---------- */
+
+.exercises-card {
+  --accent: var(--ok);
+}
+
+.routines {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.routine {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+}
+
+.routine:hover {
+  border-color: var(--ok);
+}
+
+.routine-icon {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.routine-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.safety {
+  line-height: 1.5;
+}
+
+.player {
+  --accent: var(--ok);
+}
+
+.player h2 {
+  font-size: 18px;
+}
+
+.player .steps {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  line-height: 1.45;
+}
+
+.player .actions {
+  display: flex;
+  gap: 8px;
+}
+
+.player .actions .primary {
+  flex: 1;
+}
+
+.player.done {
+  align-items: center;
+  text-align: center;
+}
+
+.player-icon {
+  font-size: 40px;
+}
+
+/* ---------- Odak, skor, haftalık özet, nefes ---------- */
+
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.center {
+  text-align: center;
+}
+
+.panel .actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.panel .actions .primary {
+  flex: 1;
+}
+
+.focus-card {
+  --accent: #8b5cf6;
+}
+
+.clock.paused {
+  opacity: 0.45;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  padding: 6px 12px;
+  border-radius: 99px;
+  background: var(--track);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.chip.on {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.score-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.score-row .panel {
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+}
+
+.score-row h2 {
+  margin-bottom: 4px;
+}
+
+.score-row .muted {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.ring {
+  --pct: 0%;
+  flex: none;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(var(--ok) var(--pct), var(--track) 0);
+}
+
+.ring span {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.streak-count {
+  flex: none;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.week-summary {
+  padding: 18px;
+  border-radius: var(--radius);
+  color: #fff;
+  background: linear-gradient(135deg, #2a7de1 0%, #8b5cf6 55%, #e07a2f 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.week-summary h2 {
+  font-size: 17px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.summary-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.summary-value {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.summary-label {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.share {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  font-weight: 600;
+}
+
+.share:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.section-title {
+  font-size: 15px;
+  margin-top: 4px;
+}
+
+.routine.breath:hover {
+  border-color: var(--water);
+}
+
+.breath-player {
+  --accent: var(--water);
+  align-items: center;
+}
+
+.breath-stage {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  display: grid;
+  place-items: center;
+}
+
+.breath-circle {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--water) 0%, rgba(90, 162, 245, 0.25) 70%);
+  transform: scale(0.45);
+  transition-property: transform;
+  transition-timing-function: ease-in-out;
+}
+
+.breath-circle.big {
+  transform: scale(1);
+}
+
+.breath-label {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.breath-label strong {
+  font-size: 18px;
+}
+
+.breath-label span {
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.breath-player .actions {
+  align-self: stretch;
 }
