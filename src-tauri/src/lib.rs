@@ -15,7 +15,7 @@ use serde::Serialize;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Emitter, Manager, PhysicalPosition, State, WindowEvent, Wry,
+    AppHandle, Emitter, Manager, PhysicalPosition, State, WebviewWindowBuilder, WindowEvent, Wry,
 };
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 
@@ -448,6 +448,11 @@ pub fn run() {
                 store,
                 tray_status: Mutex::new(tray_status),
             });
+            // Pencereler durum kaydedildikten sonra açılır; yoksa sayfa ilk komutları
+            // `manage` öncesinde çağırıp hata alır ve panel boş kalır.
+            for config in app.config().app.windows.clone() {
+                WebviewWindowBuilder::from_config(app.handle(), &config)?.build()?;
+            }
             // Windows açılışında sessizce tepsiye; elle açılınca panel görünür.
             if !std::env::args().any(|a| a == AUTOSTART_ARG) {
                 show_main(app.handle());

@@ -13,6 +13,7 @@
     "windows": [
       {
         "label": "main",
+        "create": false,
         "title": "Mola",
         "width": 480,
         "height": 760,
@@ -23,6 +24,7 @@
       },
       {
         "label": "reminder",
+        "create": false,
         "title": "Mola",
         "width": 360,
         "height": 236,
