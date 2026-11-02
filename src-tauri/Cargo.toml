@@ -1,6 +1,6 @@
 [package]
 name = "mola"
-version = "0.1.0"
+version = "0.1.1"
 description = "Mola: su içme ve kalkıp yürüme hatırlatıcısı"
 authors = ["furkan-uysal"]
 edition = "2024"
